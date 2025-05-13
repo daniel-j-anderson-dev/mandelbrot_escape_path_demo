@@ -1,0 +1,10 @@
+[package]
+name = "mandelbrot_macroquad"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+macroquad = "0.4.14"
+num = "0.4.3"
+rayon = "1.10.0"
+mandelbrot = { git = "https://github.com/daniel-j-anderson-dev/mandlebrot.git" }
