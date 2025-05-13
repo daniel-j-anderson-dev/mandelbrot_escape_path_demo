@@ -61,7 +61,7 @@ async fn main() {
     const BOTTOM_RIGHT: Complex<f32> = Complex::new(0.5, -1.2);
 
     // define how many iterations of the mandelbrot formula should be performed to determine detail level
-    const ITERATION_MAX: usize = 500;
+    const ITERATION_MAX: usize = 1000;
 
     const SIZE: f32 = 3.0;
 
