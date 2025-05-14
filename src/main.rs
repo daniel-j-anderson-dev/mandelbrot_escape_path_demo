@@ -100,7 +100,7 @@ async fn main() {
 
         // draw the mandelbrot picture we generated
         draw_texture(&texture, 0.0, 0.0, WHITE);
-        
+
         let z_values = &mandelbrot_data[mandelbrot_pixel_index].1;
 
         // draw a circle at each z value and a line connecting to the next z value
@@ -120,15 +120,6 @@ async fn main() {
 
         /* INPUT LOGIC */
         c_screen_position = Vec2::from(mouse_position()).clamp(Vec2::ZERO, screen_size().into());
-        draw_hexagon(
-            c_screen_position.x,
-            c_screen_position.y,
-            SIZE,
-            SIZE / 2.0,
-            false,
-            BLUE,
-            RED,
-        );
 
         // calculate which pixel the c value corresponds to
         mandelbrot_pixel_index = calculate_pixel_index(c_screen_position);
