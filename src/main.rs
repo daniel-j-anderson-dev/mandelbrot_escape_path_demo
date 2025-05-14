@@ -1,8 +1,6 @@
 use macroquad::{miniquad::window::screen_size, prelude::*};
 use mandelbrot::{calculate_mandelbrot_escape_times_and_paths, escape_time_to_grayscale}; // my library
 use num::Complex;
-
-// used from
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
 };
@@ -18,8 +16,14 @@ fn complex_to_screen_coordinate(
     vec2(x_percent * screen_width(), y_percent * screen_height())
 }
 
+fn serialize_index(row_index: usize, column_index: usize, width: usize) -> usize {
+    row_index * width + column_index
+}
+
 fn calculate_pixel_index(screen_position: Vec2) -> usize {
-    (screen_position.y * screen_height()) as usize + screen_position.x as usize
+    let row_index = screen_position.y as usize;
+    let column_index = screen_position.x as usize;
+    serialize_index(row_index, column_index, screen_width() as usize)
 }
 
 // use the raw mandelbrot data to form a grayscale image
@@ -44,7 +48,7 @@ fn macroquad_configuration() -> Conf {
         window_title: String::from("mandelbrot demo"),
         window_width: 800,
         window_height: 800,
-        window_resizable: false,
+        window_resizable: true,
         high_dpi: true,
         fullscreen: false,
         sample_count: 0,
@@ -98,10 +102,11 @@ async fn main() {
         draw_texture(&texture, 0.0, 0.0, WHITE);
 
         // get the path of z values that correspond to the selected pixel
-        let z_values = mandelbrot_data
-            .get(mandelbrot_pixel_index) // get the data at the selected pixel
-            .map(|(_escape_time, z_values)| z_values.as_slice()) // we
-            .unwrap_or(&[]);
+        // let z_values = mandelbrot_data
+        //     .get(mandelbrot_pixel_index) // get the data at the selected pixel
+        //     .map(|(_escape_time, z_values)| z_values.as_slice())
+        //     .unwrap_or(&[]);
+        let z_values = &mandelbrot_data[mandelbrot_pixel_index].1;
 
         // draw a circle at each z value and a line connecting to the next z value
         let mut i = z_values.len().saturating_sub(1);
@@ -119,19 +124,17 @@ async fn main() {
         }
 
         /* INPUT LOGIC */
-        // let the use select a c value with the arrow keys
-        if is_key_down(KeyCode::Up) {
-            c_screen_position.y -= 1.0
-        }
-        if is_key_down(KeyCode::Down) {
-            c_screen_position.y += 1.0
-        }
-        if is_key_down(KeyCode::Left) {
-            c_screen_position.x -= 1.0
-        }
-        if is_key_down(KeyCode::Right) {
-            c_screen_position.x += 1.0
-        }
+        c_screen_position = Vec2::from(mouse_position()).clamp(Vec2::ZERO, screen_size().into());
+        draw_hexagon(
+            c_screen_position.x,
+            c_screen_position.y,
+            SIZE,
+            SIZE / 2.0,
+            false,
+            BLUE,
+            RED,
+        );
+
         // calculate which pixel the c value corresponds to
         mandelbrot_pixel_index = calculate_pixel_index(c_screen_position);
 
