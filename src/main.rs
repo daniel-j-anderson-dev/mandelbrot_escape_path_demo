@@ -101,9 +101,8 @@ async fn main() {
         // draw the mandelbrot picture we generated
         draw_texture(&texture, 0.0, 0.0, WHITE);
 
-        let z_values = &mandelbrot_data[mandelbrot_pixel_index].1;
-
         // draw a circle at each z value and a line connecting to the next z value
+        let z_values = &mandelbrot_data[mandelbrot_pixel_index].1;
         let mut i = z_values.len().saturating_sub(1);
         while i > 0 {
             // make the first z value RED
