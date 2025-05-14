@@ -100,12 +100,7 @@ async fn main() {
 
         // draw the mandelbrot picture we generated
         draw_texture(&texture, 0.0, 0.0, WHITE);
-
-        // get the path of z values that correspond to the selected pixel
-        // let z_values = mandelbrot_data
-        //     .get(mandelbrot_pixel_index) // get the data at the selected pixel
-        //     .map(|(_escape_time, z_values)| z_values.as_slice())
-        //     .unwrap_or(&[]);
+        
         let z_values = &mandelbrot_data[mandelbrot_pixel_index].1;
 
         // draw a circle at each z value and a line connecting to the next z value
