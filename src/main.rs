@@ -1,5 +1,7 @@
 use macroquad::{miniquad::window::screen_size, prelude::*};
-use mandelbrot::{calculate_mandelbrot_escape_times_and_paths, escape_time_to_grayscale}; // my library
+use mandelbrot::{
+    calculate_mandelbrot_escape_times_and_paths, escape_time_to_grayscale, pixel_to_complex,
+}; // my library
 use num::Complex;
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
@@ -7,13 +9,26 @@ use rayon::iter::{
 
 fn complex_to_screen_coordinate(
     z: Complex<f32>,
-    top_left: Complex<f32>,
-    bottom_right: Complex<f32>,
+    center: Complex<f32>,
+    dimensions: Complex<f32>,
 ) -> Vec2 {
-    let x_percent = (z.re - top_left.re) / (bottom_right.re - top_left.re);
-    let y_percent = (z.im - top_left.im) / (bottom_right.im - top_left.im);
+    let top_left = Complex::new(
+        center.re - dimensions.re / 2.0,
+        center.im + dimensions.im / 2.0,
+    );
 
-    vec2(x_percent * screen_width(), y_percent * screen_height())
+    let x_percent = (z.re - top_left.re) / dimensions.re;
+    let y_percent = (top_left.im - z.im) / dimensions.im;
+
+    let x = x_percent * screen_width();
+    let y = screen_height() - y_percent * screen_height();
+
+    vec2(x, y)
+}
+
+fn calculate_complex_dimensions(scale: f32) -> Complex<f32> {
+    let dimensions = Complex::new(screen_width(), screen_height());
+    (dimensions / dimensions.norm()).scale(scale)
 }
 
 fn serialize_index(row_index: usize, column_index: usize, width: usize) -> usize {
@@ -23,21 +38,39 @@ fn serialize_index(row_index: usize, column_index: usize, width: usize) -> usize
 fn calculate_pixel_index(screen_position: Vec2) -> usize {
     let row_index = screen_position.y as usize;
     let column_index = screen_position.x as usize;
-    serialize_index(row_index, column_index, screen_width() as usize)
+    let width = screen_width() as usize;
+
+    serialize_index(row_index, column_index, width)
 }
 
 // use the raw mandelbrot data to form a grayscale image
-fn create_mandelbrot_image(mandelbrot_data: &[(Option<usize>, Vec<Complex<f32>>)]) -> Image {
+fn create_mandelbrot_image(
+    mandelbrot_data: &[(Option<usize>, Vec<Complex<f32>>)],
+    center: Complex<f32>,
+    dimensions: Complex<f32>,
+) -> Image {
     // start with a blank image
     let mut image = Image::gen_image_color(screen_width() as u16, screen_height() as u16, BLACK);
 
     // update each pixel color in parallel
+    let w = screen_width() as usize;
+    let h = screen_height() as usize;
     image
         .get_image_data_mut() // we need the image pixel data to change
         .par_iter_mut() // we want to edit all pixels at once
         .zip(mandelbrot_data.par_iter()) // we zip each pixel color with it's mandelbrot data
-        .for_each(|(pixel_color, &(escape_time, _))| {
-            *pixel_color = escape_time_to_grayscale(escape_time).as_array();
+        .enumerate()
+        .for_each(|(i, (pixel_color, &(escape_time, _)))| {
+            let row_index = i / w;
+            let column_index = i % w;
+            let c = pixel_to_complex(column_index, row_index, w, h, center, dimensions);
+            if (-0.001..0.001).contains(&c.re) {
+                *pixel_color = [0, 255, 0, 255];
+            } else if c.im == 0.0 {
+                *pixel_color = [255, 0, 0, 255];
+            } else {
+                *pixel_color = escape_time_to_grayscale(escape_time).as_array();
+            }
         });
 
     image
@@ -61,35 +94,29 @@ fn macroquad_configuration() -> Conf {
 async fn main() {
     /* SETUP */
     // define the area of the complex plane being viewed
-    const TOP_LEFT: Complex<f32> = Complex::new(-2.0, 1.2);
-    const BOTTOM_RIGHT: Complex<f32> = Complex::new(0.5, -1.2);
+    let scale = 4.0;
+    let center = Complex::new(-0.4, 0.0);
 
     // define how many iterations of the mandelbrot formula should be performed to determine detail level
-    const ITERATION_MAX: usize = 1000;
+    let iteration_max = 1000;
 
-    const SIZE: f32 = 3.0;
-
-    // keep track of the screen size to detect a screen size change!
-    let mut old_screen_size = screen_size();
+    let mut dimensions = calculate_complex_dimensions(scale);
 
     // this is the c value in the mandelbrot formula zₙ₊₁ = zₙ² + c.
     // control this value with the arrow keys!
     let mut c_screen_position = Vec2::ZERO;
 
-    // the c value corresponds to a pixel in the mandelbrot image
-    let mut mandelbrot_pixel_index = calculate_pixel_index(c_screen_position);
-
     // A collection of (escape_time, z_values).
     let mut mandelbrot_data = calculate_mandelbrot_escape_times_and_paths(
         screen_width() as usize,
         screen_height() as usize,
-        TOP_LEFT,
-        BOTTOM_RIGHT,
-        ITERATION_MAX,
+        center,
+        dimensions,
+        iteration_max,
     );
 
     // create an image and texture from the mandelbrot_data
-    let mut image = create_mandelbrot_image(&mandelbrot_data);
+    let mut image = create_mandelbrot_image(&mandelbrot_data, center, dimensions);
     let mut texture = Texture2D::from_image(&image);
 
     /* MAIN LOOP */
@@ -102,16 +129,23 @@ async fn main() {
         draw_texture(&texture, 0.0, 0.0, WHITE);
 
         // draw a circle at each z value and a line connecting to the next z value
-        let z_values = &mandelbrot_data[mandelbrot_pixel_index].1;
+        let z_values = mandelbrot_data
+            .get(calculate_pixel_index(c_screen_position))
+            .map(|(_escape_time, escape_path)| escape_path.as_slice())
+            .unwrap_or(&[]);
         let mut i = z_values.len().saturating_sub(1);
         while i > 0 {
             // make the first z value RED
-            let color = if i == 1 { RED } else { ORANGE };
+            let color = match i {
+                0 | 1 => LIGHTGRAY,
+                2 => RED,
+                _ => ORANGE,
+            };
 
-            let start = complex_to_screen_coordinate(z_values[i - 1], TOP_LEFT, BOTTOM_RIGHT);
-            let end = complex_to_screen_coordinate(z_values[i], TOP_LEFT, BOTTOM_RIGHT);
+            let start = complex_to_screen_coordinate(z_values[i - 1], center, dimensions);
+            let end = complex_to_screen_coordinate(z_values[i], center, dimensions);
 
-            draw_circle(start.x, start.y, SIZE, color);
+            draw_circle(start.x, start.y, 3.0, color);
             draw_line(start.x, start.y, end.x, end.y, 1.0, SKYBLUE);
 
             i -= 1;
@@ -120,20 +154,17 @@ async fn main() {
         /* INPUT LOGIC */
         c_screen_position = Vec2::from(mouse_position()).clamp(Vec2::ZERO, screen_size().into());
 
-        // calculate which pixel the c value corresponds to
-        mandelbrot_pixel_index = calculate_pixel_index(c_screen_position);
-
         // if the screen changes size we need a new mandelbrot image!
-        if old_screen_size != screen_size() {
-            old_screen_size = screen_size();
+        if dimensions != calculate_complex_dimensions(scale) {
+            dimensions = calculate_complex_dimensions(scale);
             mandelbrot_data = calculate_mandelbrot_escape_times_and_paths(
                 screen_width() as usize,
                 screen_height() as usize,
-                TOP_LEFT,
-                BOTTOM_RIGHT,
-                ITERATION_MAX,
+                center,
+                dimensions,
+                iteration_max,
             );
-            image = create_mandelbrot_image(&mandelbrot_data);
+            image = create_mandelbrot_image(&mandelbrot_data, center, dimensions);
             texture = Texture2D::from_image(&image);
         }
 
