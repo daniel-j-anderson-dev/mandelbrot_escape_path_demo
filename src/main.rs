@@ -1,7 +1,7 @@
 use macroquad::{miniquad::window::screen_size, prelude::*};
-use mandelbrot::{
-    calculate_mandelbrot_escape_times_and_paths, escape_time_to_grayscale, pixel_to_complex,
-}; // my library
+use mandelbrot::calculate_mandelbrot_escape_times_and_paths;
+use mandelbrot::escape_time_to_grayscale; // my library
+use mandelbrot::pixel_to_complex;
 use num::Complex;
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
@@ -64,11 +64,16 @@ fn create_mandelbrot_image(
             let row_index = i / w;
             let column_index = i % w;
             let c = pixel_to_complex(column_index, row_index, w, h, center, dimensions);
+            // draw x axis
             if (-0.001..0.001).contains(&c.re) {
                 *pixel_color = [0, 255, 0, 255];
-            } else if c.im == 0.0 {
+            }
+            // draw y axis
+            else if c.im == 0.0 {
                 *pixel_color = [255, 0, 0, 255];
-            } else {
+            }
+            // draw mandelbrot
+            else {
                 *pixel_color = escape_time_to_grayscale(escape_time).as_array();
             }
         });
@@ -135,7 +140,6 @@ async fn main() {
             .unwrap_or(&[]);
         let mut i = z_values.len().saturating_sub(1);
         while i > 0 {
-            // make the first z value RED
             let color = match i {
                 0 | 1 => LIGHTGRAY,
                 2 => RED,
