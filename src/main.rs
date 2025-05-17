@@ -19,6 +19,25 @@ fn rgba_to_array(color: Color) -> [u8; 4] {
     ]
 }
 
+fn screen_position_to_complex(
+    screen_position: Vec2,
+    center: Complex<f32>,
+    dimensions: Complex<f32>,
+) -> Complex<f32> {
+    let x_percent = screen_position.x / screen_width();
+    let y_percent = screen_position.y / screen_height();
+
+    let top_left = Complex::new(
+        center.re - dimensions.re / 2.0,
+        center.im + dimensions.im / 2.0,
+    );
+
+    Complex::new(
+        top_left.re + x_percent * dimensions.re,
+        top_left.im - y_percent * dimensions.im,
+    )
+}
+
 fn complex_to_screen_coordinate(
     z: Complex<f32>,
     center: Complex<f32>,
@@ -39,8 +58,11 @@ fn complex_to_screen_coordinate(
 }
 
 fn calculate_complex_dimensions(scale: f32) -> Complex<f32> {
-    let dimensions = Complex::new(screen_width(), screen_height());
-    (dimensions / dimensions.norm()).scale(scale)
+    // Treat scale as a zoom level. Larger values = zoom in
+    const BASE_WIDTH: f32 = 4.0; // default view of the Mandelbrot set
+    let base_height = BASE_WIDTH * screen_height() / screen_width(); // maintain aspect ratio
+
+    Complex::new(BASE_WIDTH, base_height) / scale
 }
 
 fn serialize_index(row_index: usize, column_index: usize, width: usize) -> usize {
@@ -104,13 +126,23 @@ fn controls_window(
         generate_text_dimensions.width * 1.25,
         generate_button_position.y,
     );
+    let c_label_dimensions = measure_text("c: ", None, 16, 1.0);
+    let c_label_position = vec2(0.0, generate_button_position.y - c_label_dimensions.height * 4.0);
     Window::new(hash!(), Vec2::ZERO, window_size)
         .label("controls")
         .titlebar(true)
         .ui(&mut *root_ui(), |ui| {
             ui.slider(hash!(), "Center Real", -2.0..2.0, &mut center.re);
             ui.slider(hash!(), "Center Imaginary", -2.0..2.0, &mut center.im);
-            ui.slider(hash!(), "Scale", 0.0..10.0, scale);
+            ui.slider(hash!(), "Scale", 1.0..1000.0, scale);
+            ui.label(
+                c_label_position,
+                format!(
+                    "c: {}",
+                    screen_position_to_complex(mouse_position().into(), *center, *dimensions)
+                )
+                .as_str(),
+            );
             if ui.button(generate_button_position, "Generate Image") {
                 *dimensions = calculate_complex_dimensions(*scale);
                 *mandelbrot_data = calculate_mandelbrot_escape_times_and_paths(
@@ -124,7 +156,7 @@ fn controls_window(
                 *texture = Texture2D::from_image(image);
             }
             if ui.button(reset_button_position, "Reset") {
-                *scale = 10.0;
+                *scale = 1.0;
                 *center = Complex::new(-0.4, 0.0);
             }
         });
@@ -148,7 +180,7 @@ fn macroquad_configuration() -> Conf {
 async fn main() {
     /* SETUP */
     // define the area of the complex plane being viewed
-    let mut scale = 10.0;
+    let mut scale = 1.0;
     let mut center = Complex::new(-0.4, 0.0);
 
     // define how many iterations of the mandelbrot formula should be performed to determine detail level
