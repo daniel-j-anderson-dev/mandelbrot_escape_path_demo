@@ -199,7 +199,7 @@ dependencies = [
 [[package]]
 name = "mandelbrot"
 version = "0.1.0"
-source = "git+https://github.com/daniel-j-anderson-dev/mandlebrot.git#8166bdae4e240d749993d83d96777f9acc63fa7d"
+source = "git+https://github.com/daniel-j-anderson-dev/mandlebrot.git#244ef859cc132f6819530c60e73443fe7b6e81ad"
 dependencies = [
  "num",
  "rayon",
