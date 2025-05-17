@@ -92,7 +92,7 @@ fn create_mandelbrot_image(
         .for_each(|(pixel_color, (escape_time, escape_path))| {
             let color = match escape_time {
                 &Some(escape_time) => {
-                    let last_z = escape_path.last().unwrap();
+                    let last_z = escape_path.last().expect("all paths start at 0+0i");
                     let smoothed_iteration = escape_time as f32 + 1.0 - last_z.norm().log2().log2();
                     let normalized = smoothed_iteration / iteration_max as f32;
 
