@@ -1,4 +1,9 @@
-use macroquad::{color::hsl_to_rgb, miniquad::window::screen_size, prelude::*};
+use macroquad::{
+    color::hsl_to_rgb,
+    miniquad::window::screen_size,
+    prelude::*,
+    ui::{hash, root_ui, widgets::Window},
+};
 use mandelbrot::calculate_mandelbrot_escape_times_and_paths;
 use num::Complex;
 use rayon::iter::{
@@ -64,10 +69,9 @@ fn create_mandelbrot_image(
         .zip(mandelbrot_data.par_iter()) // we zip each pixel color with it's mandelbrot data
         .for_each(|(pixel_color, (escape_time, escape_path))| {
             let color = match escape_time {
-                Some(escape_time) => {
+                &Some(escape_time) => {
                     let last_z = escape_path.last().unwrap();
-                    let smoothed_iteration =
-                        *escape_time as f32 + 1.0 - last_z.norm().log2().log2();
+                    let smoothed_iteration = escape_time as f32 + 1.0 - last_z.norm().log2().log2();
                     let normalized = smoothed_iteration / iteration_max as f32;
 
                     let hue = (normalized % 1.0).powf(0.7);
@@ -82,6 +86,48 @@ fn create_mandelbrot_image(
         });
 
     image
+}
+
+fn controls_window(
+    center: &mut Complex<f32>,
+    scale: &mut f32,
+    dimensions: &mut Complex<f32>,
+    iteration_max: &mut usize,
+    mandelbrot_data: &mut Vec<(Option<usize>, Vec<Complex<f32>>)>,
+    image: &mut Image,
+    texture: &mut Texture2D,
+) {
+    let window_size = vec2(250.0, 250.0);
+    let generate_text_dimensions = measure_text("Generate Image", None, 16, 1.0);
+    let generate_button_position = vec2(0.0, window_size.y - generate_text_dimensions.height * 4.0);
+    let reset_button_position = vec2(
+        generate_text_dimensions.width * 1.25,
+        generate_button_position.y,
+    );
+    Window::new(hash!(), Vec2::ZERO, window_size)
+        .label("controls")
+        .titlebar(true)
+        .ui(&mut *root_ui(), |ui| {
+            ui.slider(hash!(), "Center Real", -2.0..2.0, &mut center.re);
+            ui.slider(hash!(), "Center Imaginary", -2.0..2.0, &mut center.im);
+            ui.slider(hash!(), "Scale", 0.0..10.0, scale);
+            if ui.button(generate_button_position, "Generate Image") {
+                *dimensions = calculate_complex_dimensions(*scale);
+                *mandelbrot_data = calculate_mandelbrot_escape_times_and_paths(
+                    screen_width() as usize,
+                    screen_height() as usize,
+                    *center,
+                    *dimensions,
+                    *iteration_max,
+                );
+                *image = create_mandelbrot_image(mandelbrot_data, *iteration_max);
+                *texture = Texture2D::from_image(image);
+            }
+            if ui.button(reset_button_position, "Reset") {
+                *scale = 10.0;
+                *center = Complex::new(-0.4, 0.0);
+            }
+        });
 }
 
 fn macroquad_configuration() -> Conf {
@@ -102,13 +148,11 @@ fn macroquad_configuration() -> Conf {
 async fn main() {
     /* SETUP */
     // define the area of the complex plane being viewed
-    let scale = 4.0;
-    let center = Complex::new(-0.4, 0.0);
-    // let scale = 0.01;
-    // let center = Complex::new(-0.812223315621338, -0.185453926110785);
+    let mut scale = 10.0;
+    let mut center = Complex::new(-0.4, 0.0);
 
     // define how many iterations of the mandelbrot formula should be performed to determine detail level
-    let iteration_max = 500;
+    let mut iteration_max = 500;
 
     let mut dimensions = calculate_complex_dimensions(scale);
 
@@ -164,20 +208,15 @@ async fn main() {
 
         /* INPUT LOGIC */
         c_screen_position = Vec2::from(mouse_position()).clamp(Vec2::ZERO, screen_size().into());
-
-        // if the screen changes size we need a new mandelbrot image!
-        if dimensions != calculate_complex_dimensions(scale) {
-            dimensions = calculate_complex_dimensions(scale);
-            mandelbrot_data = calculate_mandelbrot_escape_times_and_paths(
-                screen_width() as usize,
-                screen_height() as usize,
-                center,
-                dimensions,
-                iteration_max,
-            );
-            image = create_mandelbrot_image(&mandelbrot_data, iteration_max);
-            texture = Texture2D::from_image(&image);
-        }
+        controls_window(
+            &mut center,
+            &mut scale,
+            &mut dimensions,
+            &mut iteration_max,
+            &mut mandelbrot_data,
+            &mut image,
+            &mut texture,
+        );
 
         // this frame is done.
         // tell macroquad it can take control until next frame
