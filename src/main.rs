@@ -138,25 +138,23 @@ async fn main() {
             .get(calculate_pixel_index(c_screen_position))
             .map(|(_escape_time, escape_path)| escape_path.as_slice())
             .unwrap_or(&[]);
-        let mut i = 0;
-        while i < z_values.len().saturating_sub(1) {
+        for i in 0..z_values.len().saturating_sub(1) {
             // make size an opacity proportional to the index as a percentage
             let age = (1.0 - (i as f32 / z_values.len() as f32)).clamp(0.5, 1.0);
-            let color = match i {
+            let dot_color = match i {
                 0 => LIGHTGRAY,
                 1 => RED,
                 _ => ORANGE,
             }
             .with_alpha(age);
+            let line_color = SKYBLUE.with_alpha(age);
             let size = 3.0 * age;
 
             let start = complex_to_screen_coordinate(z_values[i], center, dimensions);
             let end = complex_to_screen_coordinate(z_values[i + 1], center, dimensions);
 
-            draw_circle(start.x, start.y, size, color);
-            draw_line(start.x, start.y, end.x, end.y, size / 3.0, SKYBLUE);
-
-            i += 1;
+            draw_line(start.x, start.y, end.x, end.y, size / 3.0, line_color);
+            draw_circle(start.x, start.y, size, dot_color);
         }
 
         /* INPUT LOGIC */
