@@ -138,6 +138,9 @@ fn controls_window(
             ui.slider(hash!(), "Center Real", -2.0..2.0, &mut center.re);
             ui.slider(hash!(), "Center Imaginary", -2.0..2.0, &mut center.im);
             ui.slider(hash!(), "Scale", 1.0..1000.0, scale);
+            let mut iteration_max_f32 = *iteration_max as f32;
+            ui.slider(hash!(), "iterations", 100.0..5000.0, &mut iteration_max_f32);
+            *iteration_max = iteration_max_f32 as usize;
             ui.label(
                 c_label_position,
                 format!(
@@ -192,7 +195,6 @@ async fn main() {
     let mut dimensions = calculate_complex_dimensions(scale);
 
     // this is the c value in the mandelbrot formula zₙ₊₁ = zₙ² + c.
-    // control this value with the arrow keys!
     let mut c_screen_position = Vec2::ZERO;
 
     // A collection of (escape_time, z_values).
