@@ -1,7 +1,7 @@
 use macroquad::{miniquad::window::screen_size, prelude::*};
-use mandelbrot::calculate_mandelbrot_escape_times_and_paths;
-use mandelbrot::escape_time_to_grayscale; // my library
-use mandelbrot::pixel_to_complex;
+use mandelbrot::{
+    calculate_mandelbrot_escape_times_and_paths, escape_time_to_grayscale, pixel_to_complex,
+};
 use num::Complex;
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
@@ -18,10 +18,10 @@ fn complex_to_screen_coordinate(
     );
 
     let x_percent = (z.re - top_left.re) / dimensions.re;
-    let y_percent = (top_left.im - z.im) / dimensions.im;
+    let y_percent = 1.0 - (top_left.im - z.im) / dimensions.im;
 
     let x = x_percent * screen_width();
-    let y = screen_height() - y_percent * screen_height();
+    let y = y_percent * screen_height();
 
     vec2(x, y)
 }
@@ -138,21 +138,25 @@ async fn main() {
             .get(calculate_pixel_index(c_screen_position))
             .map(|(_escape_time, escape_path)| escape_path.as_slice())
             .unwrap_or(&[]);
-        let mut i = z_values.len().saturating_sub(1);
-        while i > 0 {
+        let mut i = 0;
+        while i < z_values.len().saturating_sub(1) {
+            // make size an opacity proportional to the index as a percentage
+            let age = (1.0 - (i as f32 / z_values.len() as f32)).clamp(0.5, 1.0);
             let color = match i {
-                0 | 1 => LIGHTGRAY,
-                2 => RED,
+                0 => LIGHTGRAY,
+                1 => RED,
                 _ => ORANGE,
-            };
+            }
+            .with_alpha(age);
+            let size = 3.0 * age;
 
-            let start = complex_to_screen_coordinate(z_values[i - 1], center, dimensions);
-            let end = complex_to_screen_coordinate(z_values[i], center, dimensions);
+            let start = complex_to_screen_coordinate(z_values[i], center, dimensions);
+            let end = complex_to_screen_coordinate(z_values[i + 1], center, dimensions);
 
-            draw_circle(start.x, start.y, 3.0, color);
-            draw_line(start.x, start.y, end.x, end.y, 1.0, SKYBLUE);
+            draw_circle(start.x, start.y, size, color);
+            draw_line(start.x, start.y, end.x, end.y, size / 3.0, SKYBLUE);
 
-            i -= 1;
+            i += 1;
         }
 
         /* INPUT LOGIC */
