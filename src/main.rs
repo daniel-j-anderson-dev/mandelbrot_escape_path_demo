@@ -1,11 +1,18 @@
-use macroquad::{miniquad::window::screen_size, prelude::*};
-use mandelbrot::{
-    calculate_mandelbrot_escape_times_and_paths, escape_time_to_grayscale, pixel_to_complex,
-};
+use macroquad::{color::hsl_to_rgb, miniquad::window::screen_size, prelude::*};
+use mandelbrot::calculate_mandelbrot_escape_times_and_paths;
 use num::Complex;
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
 };
+
+fn rgba_to_array(color: Color) -> [u8; 4] {
+    [
+        (color.r * 255.0) as _,
+        (color.g * 255.0) as _,
+        (color.b * 255.0) as _,
+        (color.a * 255.0) as _,
+    ]
+}
 
 fn complex_to_screen_coordinate(
     z: Complex<f32>,
@@ -43,8 +50,10 @@ fn calculate_pixel_index(screen_position: Vec2) -> usize {
     serialize_index(row_index, column_index, width)
 }
 
-// use the raw mandelbrot data to form a grayscale image
-fn create_mandelbrot_image(mandelbrot_data: &[(Option<usize>, Vec<Complex<f32>>)]) -> Image {
+fn create_mandelbrot_image(
+    mandelbrot_data: &[(Option<usize>, Vec<Complex<f32>>)],
+    iteration_max: usize,
+) -> Image {
     // start with a blank image
     let mut image = Image::gen_image_color(screen_width() as u16, screen_height() as u16, BLACK);
 
@@ -53,8 +62,23 @@ fn create_mandelbrot_image(mandelbrot_data: &[(Option<usize>, Vec<Complex<f32>>)
         .get_image_data_mut() // we need the image pixel data to change
         .par_iter_mut() // we want to edit all pixels at once
         .zip(mandelbrot_data.par_iter()) // we zip each pixel color with it's mandelbrot data
-        .for_each(|(pixel_color, &(escape_time, _))| {
-            *pixel_color = escape_time_to_grayscale(escape_time).as_array();
+        .for_each(|(pixel_color, (escape_time, escape_path))| {
+            let color = match escape_time {
+                Some(escape_time) => {
+                    let last_z = escape_path.last().unwrap();
+                    let smoothed_iteration =
+                        *escape_time as f32 + 1.0 - last_z.norm().log2().log2();
+                    let normalized = smoothed_iteration / iteration_max as f32;
+
+                    let hue = (normalized % 1.0).powf(0.7);
+                    let saturation = 1.0;
+                    let luminance = normalized.powf(0.3) * 0.5;
+
+                    rgba_to_array(hsl_to_rgb(hue, saturation, luminance))
+                }
+                None => [0, 0, 0, 255],
+            };
+            *pixel_color = color;
         });
 
     image
@@ -80,6 +104,8 @@ async fn main() {
     // define the area of the complex plane being viewed
     let scale = 4.0;
     let center = Complex::new(-0.4, 0.0);
+    // let scale = 0.01;
+    // let center = Complex::new(-0.812223315621338, -0.185453926110785);
 
     // define how many iterations of the mandelbrot formula should be performed to determine detail level
     let iteration_max = 500;
@@ -100,7 +126,7 @@ async fn main() {
     );
 
     // create an image and texture from the mandelbrot_data
-    let mut image = create_mandelbrot_image(&mandelbrot_data);
+    let mut image = create_mandelbrot_image(&mandelbrot_data, iteration_max);
     let mut texture = Texture2D::from_image(&image);
 
     /* MAIN LOOP */
@@ -149,7 +175,7 @@ async fn main() {
                 dimensions,
                 iteration_max,
             );
-            image = create_mandelbrot_image(&mandelbrot_data);
+            image = create_mandelbrot_image(&mandelbrot_data, iteration_max);
             texture = Texture2D::from_image(&image);
         }
 
