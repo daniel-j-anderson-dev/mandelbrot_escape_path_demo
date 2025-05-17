@@ -44,38 +44,17 @@ fn calculate_pixel_index(screen_position: Vec2) -> usize {
 }
 
 // use the raw mandelbrot data to form a grayscale image
-fn create_mandelbrot_image(
-    mandelbrot_data: &[(Option<usize>, Vec<Complex<f32>>)],
-    center: Complex<f32>,
-    dimensions: Complex<f32>,
-) -> Image {
+fn create_mandelbrot_image(mandelbrot_data: &[(Option<usize>, Vec<Complex<f32>>)]) -> Image {
     // start with a blank image
     let mut image = Image::gen_image_color(screen_width() as u16, screen_height() as u16, BLACK);
 
     // update each pixel color in parallel
-    let w = screen_width() as usize;
-    let h = screen_height() as usize;
     image
         .get_image_data_mut() // we need the image pixel data to change
         .par_iter_mut() // we want to edit all pixels at once
         .zip(mandelbrot_data.par_iter()) // we zip each pixel color with it's mandelbrot data
-        .enumerate()
-        .for_each(|(i, (pixel_color, &(escape_time, _)))| {
-            let row_index = i / w;
-            let column_index = i % w;
-            let c = pixel_to_complex(column_index, row_index, w, h, center, dimensions);
-            // draw x axis
-            if (-0.001..0.001).contains(&c.re) {
-                *pixel_color = [0, 255, 0, 255];
-            }
-            // draw y axis
-            else if c.im == 0.0 {
-                *pixel_color = [255, 0, 0, 255];
-            }
-            // draw mandelbrot
-            else {
-                *pixel_color = escape_time_to_grayscale(escape_time).as_array();
-            }
+        .for_each(|(pixel_color, &(escape_time, _))| {
+            *pixel_color = escape_time_to_grayscale(escape_time).as_array();
         });
 
     image
@@ -121,7 +100,7 @@ async fn main() {
     );
 
     // create an image and texture from the mandelbrot_data
-    let mut image = create_mandelbrot_image(&mandelbrot_data, center, dimensions);
+    let mut image = create_mandelbrot_image(&mandelbrot_data);
     let mut texture = Texture2D::from_image(&image);
 
     /* MAIN LOOP */
@@ -170,7 +149,7 @@ async fn main() {
                 dimensions,
                 iteration_max,
             );
-            image = create_mandelbrot_image(&mandelbrot_data, center, dimensions);
+            image = create_mandelbrot_image(&mandelbrot_data);
             texture = Texture2D::from_image(&image);
         }
 
