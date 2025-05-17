@@ -34,7 +34,7 @@ fn screen_position_to_complex(
 
     Complex::new(
         top_left.re + x_percent * dimensions.re,
-        top_left.im - y_percent * dimensions.im,
+        y_percent * dimensions.im - top_left.im,
     )
 }
 
@@ -127,7 +127,10 @@ fn controls_window(
         generate_button_position.y,
     );
     let c_label_dimensions = measure_text("c: ", None, 16, 1.0);
-    let c_label_position = vec2(0.0, generate_button_position.y - c_label_dimensions.height * 4.0);
+    let c_label_position = vec2(
+        0.0,
+        generate_button_position.y - c_label_dimensions.height * 4.0,
+    );
     Window::new(hash!(), Vec2::ZERO, window_size)
         .label("controls")
         .titlebar(true)
