@@ -103,7 +103,7 @@ async fn main() {
     let center = Complex::new(-0.4, 0.0);
 
     // define how many iterations of the mandelbrot formula should be performed to determine detail level
-    let iteration_max = 1000;
+    let iteration_max = 500;
 
     let mut dimensions = calculate_complex_dimensions(scale);
 
