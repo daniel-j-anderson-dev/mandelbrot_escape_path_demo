@@ -16,6 +16,8 @@ The [Mandelbrot set](https://en.wikipedia.org/wiki/Mandelbrot_set) consist of co
 - `cargo build`
 - `cargo run`
 
+To host this program compiled to WASM on a HTTP server run: `cargo run --example wasm`
+
 # Examples
 ![example 1](examlpe.gif)
 
