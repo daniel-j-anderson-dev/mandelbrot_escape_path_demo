@@ -254,6 +254,14 @@ async fn main() {
             &mut image,
             &mut texture,
         );
+        if is_mouse_button_pressed(MouseButton::Right) {
+            if let Some(&c) = mandelbrot_data
+                .get(calculate_pixel_index(c_screen_position))
+                .and_then(|(_, zs)| zs.get(1))
+            {
+                center = c;
+            }
+        }
 
         // this frame is done.
         // tell macroquad it can take control until next frame
