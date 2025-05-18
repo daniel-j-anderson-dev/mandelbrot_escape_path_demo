@@ -22,3 +22,5 @@ To host this program compiled to WASM on a HTTP server run: `cargo run --example
 ![example 1](examlpe.gif)
 
 ![example 2](example.png)
+
+![wasm example](wasm_example.gif)
