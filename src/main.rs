@@ -244,7 +244,6 @@ async fn main() {
         }
 
         /* INPUT LOGIC */
-        c_screen_position = Vec2::from(mouse_position()).clamp(Vec2::ZERO, screen_size().into());
         controls_window(
             &mut center,
             &mut scale,
@@ -254,6 +253,8 @@ async fn main() {
             &mut image,
             &mut texture,
         );
+
+        c_screen_position = Vec2::from(mouse_position()).clamp(Vec2::ZERO, screen_size().into());
         if is_mouse_button_pressed(MouseButton::Right) {
             if let Some(&c) = mandelbrot_data
                 .get(calculate_pixel_index(c_screen_position))
@@ -261,6 +262,10 @@ async fn main() {
             {
                 center = c;
             }
+        }
+
+        if let Some(touch) = touches().first() {
+            c_screen_position = touch.position.clamp(Vec2::ZERO, screen_size().into());
         }
 
         // this frame is done.
