@@ -23,7 +23,6 @@ fn main() -> Result<(), CoreError> {
         (
             "GET /miniquad_wasm_glue.js HTTP/1.1".to_owned(),
             Box::new(|_request| {
-                println!("wasm glue requested");
                 let header = format!(
                     "HTTP/1.1 200 OK\r\nContent-Length: {GLUE_LEN}\r\nContent-Type: application/javascript\r\n\r\n"
                 );
@@ -35,7 +34,6 @@ fn main() -> Result<(), CoreError> {
         (
             "GET /mandelbrot.wasm HTTP/1.1".to_owned(),
             Box::new(move |_request| {
-                println!("wasm requested");
                 let header = format!(
                     "HTTP/1.1 200 OK\r\nContent-Length: {wasm_len}\r\nContent-Type: application/wasm\r\n\r\n"
                 );
@@ -47,7 +45,6 @@ fn main() -> Result<(), CoreError> {
         (
             "GET /index.html HTTP/1.1".to_owned(),
             Box::new(|_request| {
-                println!("index requested");
                 format!("HTTP/1.1 200 OK\r\nContent-Length: {INDEX_LEN}\r\n\r\n{INDEX}")
                     .into_bytes()
             }) as _,
@@ -131,11 +128,8 @@ fn serve(
         let request_line = request.lines().next().ok_or("Request line missing")?;
         let response = match routes.get(request_line) {
             Some(request_handler) => request_handler(request),
-            None => {
-                println!("no handler for {request_line:?}");
-                format!("HTTP/1.1 200 OK\r\nContent-Length: {INDEX_LEN}\r\n\r\n{INDEX}")
-                    .into_bytes()
-            }
+            None => format!("HTTP/1.1 200 OK\r\nContent-Length: {INDEX_LEN}\r\n\r\n{INDEX}")
+                .into_bytes(),
         };
 
         client.write_all(&response)?;
