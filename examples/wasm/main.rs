@@ -25,7 +25,7 @@ fn main() -> Result<(), CoreError> {
             Box::new(|_request| {
                 println!("wasm glue requested");
                 let header = format!(
-                    "HTTP/1.1 200 OK\r\nContent-Length: {GLUE_LEN}\r\nContent-Type: application/octet-stream\r\n\r\n"
+                    "HTTP/1.1 200 OK\r\nContent-Length: {GLUE_LEN}\r\nContent-Type: application/javascript\r\n\r\n"
                 );
                 let mut response = header.into_bytes();
                 response.extend_from_slice(GLUE);
@@ -37,7 +37,7 @@ fn main() -> Result<(), CoreError> {
             Box::new(move |_request| {
                 println!("wasm requested");
                 let header = format!(
-                    "HTTP/1.1 200 OK\r\nContent-Length: {wasm_len}\r\nContent-Type: application/octet-stream\r\n\r\n"
+                    "HTTP/1.1 200 OK\r\nContent-Length: {wasm_len}\r\nContent-Type: application/wasm\r\n\r\n"
                 );
                 let mut response = header.into_bytes();
                 response.extend_from_slice(&wasm);
@@ -54,7 +54,7 @@ fn main() -> Result<(), CoreError> {
         ),
     ]);
 
-    println!("Serving on http://{host_address}/index.html");
+    println!("Serving on \nhttp://localhost:7878");
 
     serve(host_address, routes)
 }
