@@ -8,6 +8,14 @@ The [Mandelbrot set](https://en.wikipedia.org/wiki/Mandelbrot_set) consist of co
 - Use the sliders to control the zoom factor and the number of iterations to approximate `∞`
 - Click `Generate Image` to create a mandelbrot image with the current settings and resolutionF
 
+# Build
+- prerequisites
+    - [Install rust](https://www.rust-lang.org/tools/install)
+- `git clone https://github.com/daniel-j-anderson-dev/mandelbrot_escape_path_demo.git`
+- `cd mandelbrot_escape_path_demo`
+- `cargo build`
+- `cargo run`
+
 # Examples
 ![example 1](examlpe.gif)
 
