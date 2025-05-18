@@ -11,12 +11,14 @@ The [Mandelbrot set](https://en.wikipedia.org/wiki/Mandelbrot_set) consist of co
 # Build
 - prerequisites
     - [Install rust](https://www.rust-lang.org/tools/install)
-- `git clone https://github.com/daniel-j-anderson-dev/mandelbrot_escape_path_demo.git`
-- `cd mandelbrot_escape_path_demo`
-- `cargo build`
-- `cargo run`
+- Native
+    - `git clone https://github.com/daniel-j-anderson-dev/mandelbrot_escape_path_demo.git`
+    - `cd mandelbrot_escape_path_demo`
+    - `cargo build`
+    - `cargo run`
+- wasm
+    - `cargo run --example wasm` will install wasm32-unknown-unknown target, build the wasm binary, and host it over HTTP
 
-To host this program compiled to WASM on a HTTP server run: `cargo run --example wasm`
 
 # Examples
 ![example 1](examlpe.gif)
