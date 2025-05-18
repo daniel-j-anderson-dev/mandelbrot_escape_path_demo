@@ -138,17 +138,17 @@ fn controls_window(
             ui.slider(hash!(), "Center Real", -2.0..2.0, &mut center.re);
             ui.slider(hash!(), "Center Imaginary", -2.0..2.0, &mut center.im);
             ui.slider(hash!(), "Scale", 1.0..1000.0, scale);
+
             let mut iteration_max_f32 = *iteration_max as f32;
             ui.slider(hash!(), "iterations", 100.0..5000.0, &mut iteration_max_f32);
             *iteration_max = iteration_max_f32 as usize;
-            ui.label(
-                c_label_position,
-                format!(
-                    "c: {}",
-                    screen_position_to_complex(mouse_position().into(), *center, *dimensions)
-                )
-                .as_str(),
-            );
+
+            if let Some(c) = mandelbrot_data
+                .get(calculate_pixel_index(mouse_position().into()))
+                .and_then(|(_, zs)| zs.get(1))
+            {
+                ui.label(c_label_position, &format!("c: {c}"));
+            }
             if ui.button(generate_button_position, "Generate Image") {
                 *dimensions = calculate_complex_dimensions(*scale);
                 *mandelbrot_data = calculate_mandelbrot_escape_times_and_paths(
@@ -226,7 +226,7 @@ async fn main() {
             .unwrap_or(&[]);
         for i in 0..z_values.len().saturating_sub(1) {
             // make size an opacity proportional to the index as a percentage
-            let age = (1.0 - (i as f32 / z_values.len() as f32)).clamp(0.5, 1.0);
+            let age = (1.0 - (i as f32 / z_values.len() as f32)).clamp(0.3, 1.0);
             let dot_color = match i {
                 0 => LIGHTGRAY,
                 1 => RED,
