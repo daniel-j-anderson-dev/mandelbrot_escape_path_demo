@@ -19,25 +19,6 @@ fn rgba_to_array(color: Color) -> [u8; 4] {
     ]
 }
 
-fn screen_position_to_complex(
-    screen_position: Vec2,
-    center: Complex<f32>,
-    dimensions: Complex<f32>,
-) -> Complex<f32> {
-    let x_percent = screen_position.x / screen_width();
-    let y_percent = screen_position.y / screen_height();
-
-    let top_left = Complex::new(
-        center.re - dimensions.re / 2.0,
-        center.im + dimensions.im / 2.0,
-    );
-
-    Complex::new(
-        top_left.re + x_percent * dimensions.re,
-        y_percent * dimensions.im - top_left.im,
-    )
-}
-
 fn complex_to_screen_coordinate(
     z: Complex<f32>,
     center: Complex<f32>,
